@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+
+<head></head>
+
+<body>
+    <script type="module">
+        import { openInputStream } from "./script/openInputStream.js";
+
+        // define your file here
+        openInputStream("/sdcard/w.txt")
+            .then((res) => res.text())
+            .then((t) => console.log(t));
+    </script>
+</body>
+
+</html>
