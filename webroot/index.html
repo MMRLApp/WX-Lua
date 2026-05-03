@@ -1,17 +1,576 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Package Viewer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #09090b;
+      --bg-card: #0f0f11;
+      --bg-hover: #18181b;
+      --bg-input: #18181b;
+      --border: #27272a;
+      --border-focus: #52525b;
+      --text: #fafafa;
+      --text-muted: #71717a;
+      --text-subtle: #a1a1aa;
+      --accent: #f4f4f5;
+      --badge-bg: #1c1c1f;
+      --badge-border: #27272a;
+      --radius: 8px;
+      --radius-sm: 5px;
+      --ring: rgba(255,255,255,0.08);
+    }
 
-<head></head>
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Geist', sans-serif;
+      font-size: 14px;
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+    .shell {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
 
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 18px 0;
+      position: sticky;
+      top: 0;
+      background: rgba(9,9,11,0.92);
+      backdrop-filter: blur(10px);
+      z-index: 50;
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      font-size: 15px;
+      letter-spacing: -0.01em;
+      flex-shrink: 0;
+    }
+
+    .logo-icon {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, #3f3f46, #18181b);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+    }
+
+    .count-badge {
+      background: var(--badge-bg);
+      border: 1px solid var(--badge-border);
+      border-radius: 20px;
+      padding: 2px 10px;
+      font-size: 11px;
+      font-family: 'Geist Mono', monospace;
+      color: var(--text-muted);
+    }
+    .controls {
+      padding: 20px 0 0;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .search-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 220px;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 11px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+      width: 15px;
+      height: 15px;
+    }
+
+    input[type="search"], select {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 13px;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+
+    input[type="search"] {
+      width: 100%;
+      padding: 8px 12px 8px 34px;
+    }
+
+    input[type="search"]::placeholder { color: var(--text-muted); }
+    input[type="search"]::-webkit-search-cancel-button { display: none; }
+
+    input[type="search"]:focus, select:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px var(--ring);
+    }
+
+    select {
+      padding: 8px 32px 8px 12px;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      cursor: pointer;
+      min-width: 130px;
+    }
+
+    select option { background: #18181b; }
+    .stats-bar {
+      padding: 14px 0 0;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-family: 'Geist Mono', monospace;
+    }
+
+    .stats-bar span { display: flex; align-items: center; gap: 5px; }
+    .stats-dot { width: 6px; height: 6px; border-radius: 50%; background: #52525b; }
+    .stats-dot.green { background: #22c55e; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+      gap: 1px;
+      margin-top: 20px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--border);
+    }
+
+    .card {
+      background: var(--bg-card);
+      padding: 16px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      cursor: default;
+      transition: background .12s;
+      position: relative;
+    }
+
+    .card:hover { background: var(--bg-hover); }
+
+    .app-icon {
+      width: 44px; height: 44px;
+      min-width: 44px; min-height: 44px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      flex-shrink: 0;
+      background: var(--bg);
+      position: relative;
+      display: grid;
+      place-items: center;
+      font-size: 20px;
+      color: var(--text-muted);
+    }
+
+    .app-icon img {
+      position: absolute;
+      inset: 0;
+      width: 44px; height: 44px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .app-icon .fallback { font-size: 18px; position: relative; z-index: 1; }
+
+    .card-body { flex: 1; min-width: 0; }
+
+    .app-name {
+      font-weight: 500;
+      font-size: 13.5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+
+    .pkg-name {
+      font-family: 'Geist Mono', monospace;
+      font-size: 10.5px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tags {
+      display: flex;
+      gap: 5px;
+      margin-top: 9px;
+      flex-wrap: wrap;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 10.5px;
+      font-family: 'Geist Mono', monospace;
+      border: 1px solid var(--badge-border);
+      background: var(--badge-bg);
+      color: var(--text-subtle);
+    }
+
+    .tag.sdk { color: #60a5fa; border-color: rgba(96,165,250,0.2); background: rgba(96,165,250,0.05); }
+    .tag.ver { color: #a3e635; border-color: rgba(163,230,53,0.2); background: rgba(163,230,53,0.05); }
+    .skeleton {
+      background: linear-gradient(90deg, var(--bg-card), var(--bg-hover), var(--bg-card));
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 4px;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .skeleton-card {
+      background: var(--bg-card);
+      padding: 16px;
+      display: flex;
+      gap: 14px;
+    }
+
+    .sk-icon { width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0; }
+    .sk-body { flex: 1; display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
+    .sk-line { height: 12px; border-radius: 3px; }
+    .empty {
+      grid-column: 1 / -1;
+      padding: 60px 20px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+      background: var(--bg-card);
+    }
+
+    .empty-icon { font-size: 32px; margin-bottom: 12px; opacity: .5; }
+    .empty-title { font-weight: 500; color: var(--text-subtle); margin-bottom: 4px; }
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0 40px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .pagination-info {
+      font-size: 12px;
+      font-family: 'Geist Mono', monospace;
+      color: var(--text-muted);
+    }
+
+    .pagination-btns { display: flex; gap: 4px; }
+
+    .btn {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 12.5px;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background .12s, border-color .12s;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .btn:hover:not(:disabled) { background: var(--bg-hover); border-color: var(--border-focus); }
+    .btn:disabled { opacity: .35; cursor: not-allowed; }
+    .btn.active { background: #27272a; border-color: #3f3f46; color: var(--accent); }
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+  </style>
+</head>
 <body>
-    <script type="module">
-        import { openInputStream } from "./script/openInputStream.js";
+<header>
+  <div class="shell header-inner">
+    <div class="logo">
+      <div class="logo-icon">📦</div>
+      Packages
+      <span class="count-badge" id="totalCount">—</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted)">
+      <span style="width:6px;height:6px;border-radius:50%;background:#22c55e;display:inline-block"></span>
+      /myPath/package
+    </div>
+  </div>
+</header>
 
-        // define your file here
-        openInputStream("/sdcard/w.txt")
-            .then((res) => res.text())
-            .then((t) => console.log(t));
-    </script>
+<div class="shell">
+  <div class="controls">
+    <div class="search-wrap">
+      <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="search" id="search" placeholder="Search apps or package names…" />
+    </div>
+    <select id="sdkFilter">
+      <option value="">All SDK versions</option>
+    </select>
+    <select id="sortSelect">
+      <option value="name">Sort: Name A–Z</option>
+      <option value="nameDesc">Sort: Name Z–A</option>
+      <option value="sdk">Sort: SDK ↑</option>
+      <option value="sdkDesc">Sort: SDK ↓</option>
+      <option value="version">Sort: Version</option>
+    </select>
+    <select id="perPage">
+      <option value="24">24 / page</option>
+      <option value="48" selected>48 / page</option>
+      <option value="96">96 / page</option>
+    </select>
+  </div>
+
+  <div class="stats-bar">
+    <span><span class="stats-dot green"></span><span id="visibleCount">—</span> packages</span>
+    <span>·</span>
+    <span id="sdkRange" style="color:var(--text-subtle)">—</span>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="pagination" id="pagination"></div>
+</div>
+
+<script>
+  const ENDPOINT = '/myPath/package/list.json';
+  const ICON_BASE = '/myPath/package/icon/';
+
+  let allPackages = [];
+  let filtered = [];
+  let page = 1;
+  let perPage = 48;
+  const iconCache = new Map();
+  async function fetchList() {
+    renderSkeletons();
+    try {
+      const res = await fetch(ENDPOINT);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      allPackages = await res.json();
+      populateSDKFilter();
+      applyFilters();
+    } catch (e) {
+      renderError(e.message);
+    }
+  }
+
+  async function fetchIcon(pkg) {
+    if (iconCache.has(pkg)) return iconCache.get(pkg);
+    try {
+      const res = await fetch(ICON_BASE + pkg);
+      if (!res.ok) throw new Error();
+      const text = await res.text().catch(() => null);
+      if (text && (text.startsWith('data:') || text.startsWith('http') || text.startsWith('/'))) {
+        iconCache.set(pkg, text);
+        return text;
+      }
+      const res2 = await fetch(ICON_BASE + pkg);
+      const blob = await res2.blob();
+      if (blob.type.startsWith('image/')) {
+        const url = URL.createObjectURL(blob);
+        iconCache.set(pkg, url);
+        return url;
+      }
+      iconCache.set(pkg, null);
+      return null;
+    } catch {
+      iconCache.set(pkg, null);
+      return null;
+    }
+  }
+  function populateSDKFilter() {
+    const sdks = [...new Set(allPackages.map(p => p.targetSdkVersion).filter(Boolean))].sort((a,b)=>b-a);
+    const sel = document.getElementById('sdkFilter');
+    sdks.forEach(sdk => {
+      const o = document.createElement('option');
+      o.value = sdk; o.textContent = `SDK ${sdk}`;
+      sel.appendChild(o);
+    });
+    document.getElementById('totalCount').textContent = allPackages.length;
+    const minSDK = Math.min(...sdks), maxSDK = Math.max(...sdks);
+    document.getElementById('sdkRange').textContent = `SDK ${minSDK}–${maxSDK}`;
+  }
+  function applyFilters() {
+    const q = document.getElementById('search').value.toLowerCase();
+    const sdk = document.getElementById('sdkFilter').value;
+    const sort = document.getElementById('sortSelect').value;
+    perPage = parseInt(document.getElementById('perPage').value);
+
+    filtered = allPackages.filter(p => {
+      const matchQ = !q || (p.appName||'').toLowerCase().includes(q) || (p.packageName||'').toLowerCase().includes(q);
+      const matchSDK = !sdk || String(p.targetSdkVersion) === sdk;
+      return matchQ && matchSDK;
+    });
+
+    filtered.sort((a, b) => {
+      if (sort === 'name')     return (a.appName||'').localeCompare(b.appName||'');
+      if (sort === 'nameDesc') return (b.appName||'').localeCompare(a.appName||'');
+      if (sort === 'sdk')      return (a.targetSdkVersion||0) - (b.targetSdkVersion||0);
+      if (sort === 'sdkDesc')  return (b.targetSdkVersion||0) - (a.targetSdkVersion||0);
+      if (sort === 'version')  return (a.versionName||'').localeCompare(b.versionName||'', undefined, {numeric:true});
+      return 0;
+    });
+
+    page = 1;
+    document.getElementById('visibleCount').textContent = filtered.length;
+    render();
+  }
+  function render() {
+    const grid = document.getElementById('grid');
+    const start = (page - 1) * perPage;
+    const slice = filtered.slice(start, start + perPage);
+
+    if (filtered.length === 0) {
+      grid.innerHTML = `<div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">No packages found</div>Try a different search or filter</div>`;
+      renderPagination();
+      return;
+    }
+
+    grid.innerHTML = slice.map(pkg => cardHTML(pkg)).join('');
+    renderPagination();
+    slice.forEach(pkg => {
+      const el = grid.querySelector(`[data-pkg="${CSS.escape(pkg.packageName)}"] img`);
+      if (el) {
+        fetchIcon(pkg.packageName).then(src => {
+          if (src && el) {
+            el.src = src;
+            el.style.opacity = '0';
+            el.onload = () => { el.style.transition = 'opacity .2s'; el.style.opacity = '1'; };
+            el.parentElement.querySelector('.fallback').style.display = 'none';
+          }
+        });
+      }
+    });
+  }
+
+  function cardHTML(pkg) {
+    const initials = (pkg.appName||'?').charAt(0).toUpperCase();
+    return `
+      <div class="card" data-pkg="${escapeAttr(pkg.packageName)}">
+        <div class="app-icon">
+          <span class="fallback">${initials}</span>
+          <img src="" alt="" style="opacity:0" />
+        </div>
+        <div class="card-body">
+          <div class="app-name" title="${escapeAttr(pkg.appName)}">${escapeHTML(pkg.appName||'Unknown')}</div>
+          <div class="pkg-name" title="${escapeAttr(pkg.packageName)}">${escapeHTML(pkg.packageName||'')}</div>
+          <div class="tags">
+            ${pkg.versionName ? `<span class="tag ver">v${escapeHTML(pkg.versionName)}</span>` : ''}
+            ${pkg.targetSdkVersion ? `<span class="tag sdk">SDK ${pkg.targetSdkVersion}</span>` : ''}
+            ${pkg.versionCode ? `<span class="tag">#${pkg.versionCode}</span>` : ''}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function renderSkeletons() {
+    const grid = document.getElementById('grid');
+    grid.innerHTML = Array.from({length: 24}, () => `
+      <div class="skeleton-card">
+        <div class="sk-icon skeleton"></div>
+        <div class="sk-body">
+          <div class="sk-line skeleton" style="width:70%"></div>
+          <div class="sk-line skeleton" style="width:90%"></div>
+          <div class="sk-line skeleton" style="width:45%"></div>
+        </div>
+      </div>`).join('');
+  }
+  function renderError(msg) {
+    document.getElementById('grid').innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">⚠️</div>
+        <div class="empty-title">Failed to load packages</div>
+        ${escapeHTML(msg)}
+      </div>`;
+  }
+  function renderPagination() {
+    const total = Math.ceil(filtered.length / perPage);
+    const el = document.getElementById('pagination');
+    if (total <= 1) { el.innerHTML = ''; return; }
+
+    const start = (page - 1) * perPage + 1;
+    const end = Math.min(page * perPage, filtered.length);
+    const delta = 2;
+    const pages = [];
+    for (let i = 1; i <= total; i++) {
+      if (i === 1 || i === total || (i >= page - delta && i <= page + delta)) pages.push(i);
+      else if (pages[pages.length-1] !== '…') pages.push('…');
+    }
+
+    el.innerHTML = `
+      <span class="pagination-info">${start}–${end} of ${filtered.length}</span>
+      <div class="pagination-btns">
+        <button class="btn" id="prevBtn" ${page===1?'disabled':''} onclick="goPage(${page-1})">← Prev</button>
+        ${pages.map(p => p === '…'
+          ? `<button class="btn" disabled>…</button>`
+          : `<button class="btn ${p===page?'active':''}" onclick="goPage(${p})">${p}</button>`
+        ).join('')}
+        <button class="btn" id="nextBtn" ${page===total?'disabled':''} onclick="goPage(${page+1})">Next →</button>
+      </div>`;
+  }
+
+  function goPage(p) {
+    const total = Math.ceil(filtered.length / perPage);
+    if (p < 1 || p > total) return;
+    page = p;
+    render();
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  }
+  function escapeHTML(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function escapeAttr(s) { return String(s||'').replace(/"/g,'&quot;'); }
+  let searchDebounce;
+  document.getElementById('search').addEventListener('input', () => {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(applyFilters, 180);
+  });
+  document.getElementById('sdkFilter').addEventListener('change', applyFilters);
+  document.getElementById('sortSelect').addEventListener('change', applyFilters);
+  document.getElementById('perPage').addEventListener('change', applyFilters);
+  fetchList();
+</script>
 </body>
-
 </html>
