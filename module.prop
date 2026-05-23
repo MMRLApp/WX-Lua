@@ -1,5 +1,5 @@
-id=wx_lua
-name=WebUI X Lua
-description=none
+id=mx_lua
+name=Custom Package Viewer
+description=A custom package viewer built with Lua and predictive back gesture support
 version=1
 versionCode=1
