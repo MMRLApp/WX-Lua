@@ -1,3 +1,4 @@
 {
-    "contentSecurityPolicy": "*"
+    "contentSecurityPolicy": "*",
+    "backInterceptor": "javascript"
 }

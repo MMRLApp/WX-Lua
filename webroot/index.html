@@ -323,9 +323,17 @@
     ::-webkit-scrollbar { width: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+
+    #page-root {
+      min-height: 100vh;
+      background: var(--bg);
+      will-change: transform;
+      transform-origin: center top;
+    }
   </style>
 </head>
 <body>
+<div id="page-root">
 <header>
   <div class="shell header-inner">
     <div class="logo">
@@ -372,6 +380,7 @@
   <div class="grid" id="grid"></div>
 
   <div class="pagination" id="pagination"></div>
+</div>
 </div>
 
 <script>
@@ -571,6 +580,83 @@
   document.getElementById('sortSelect').addEventListener('change', applyFilters);
   document.getElementById('perPage').addEventListener('change', applyFilters);
   fetchList();
+
+  // Predictive back gesture
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof document.addMXEventListener !== 'function') return;
+
+    const root = document.getElementById('page-root');
+    let gestureEdge = 'left';
+    let cancelTimer = null;
+
+    function applyTransform(progress, edge) {
+      const scale = 1 - progress * 0.08;
+      const tx = (edge === 'left' ? 1 : -1) * progress * 28;
+      const ty = progress * 6;
+      const r = progress * 18;
+      root.style.transform = `scale(${scale}) translate(${tx}px, ${ty}px)`;
+      root.style.borderRadius = `${r}px`;
+      root.style.overflow = 'hidden';
+    }
+
+    function resetTransform(animated) {
+      if (cancelTimer) { clearTimeout(cancelTimer); cancelTimer = null; }
+      if (animated) {
+        root.style.transition = 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1), border-radius 0.3s ease, opacity 0.3s ease';
+        cancelTimer = setTimeout(() => {
+          root.style.transition = '';
+          root.style.overflow = '';
+          cancelTimer = null;
+        }, 380);
+      }
+      root.style.transform = '';
+      root.style.borderRadius = '';
+      root.style.opacity = '';
+    }
+
+    document.addMXEventListener('backStarted', (data) => {
+      root.style.transition = 'none';
+      gestureEdge = ((data.touchX ?? data.x ?? 0) < window.innerWidth / 2) ? 'left' : 'right';
+      applyTransform(data.progress ?? 0, gestureEdge);
+    });
+
+    document.addMXEventListener('backProgressed', (data) => {
+      applyTransform(data.progress ?? 0, gestureEdge);
+    });
+
+    document.addMXEventListener('backCancelled', () => {
+      resetTransform(true);
+    });
+
+    document.addMXEventListener('backPressed', async () => {
+      if (page > 1) {
+        // Animate out, go to previous page, animate back in
+        root.style.transition = 'transform 0.22s ease-in, opacity 0.22s ease-in';
+        root.style.transform = `scale(0.94) translateX(${gestureEdge === 'left' ? 60 : -60}px)`;
+        root.style.opacity = '0';
+        setTimeout(() => {
+          goPage(page - 1);
+          root.style.transition = 'none';
+          root.style.transform = `scale(0.94) translateX(${gestureEdge === 'left' ? -40 : 40}px)`;
+          root.style.opacity = '0';
+          // Force reflow
+          void root.offsetWidth;
+          root.style.transition = 'transform 0.3s cubic-bezier(0.34,1.56,0.64,1), opacity 0.25s ease-out';
+          root.style.transform = '';
+          root.style.opacity = '';
+          setTimeout(() => { root.style.transition = ''; root.style.overflow = ''; }, 320);
+        }, 220);
+      } else {
+        // No previous page — animate out and exit
+        root.style.transition = 'transform 0.25s ease-in, opacity 0.25s ease-in';
+        root.style.transform = `scale(0.85) translateX(${gestureEdge === 'left' ? 80 : -80}px)`;
+        root.style.opacity = '0';
+        setTimeout(() => {
+          if (typeof window.exit === 'function') window.exit();
+        }, 260);
+      }
+    });
+  });
 </script>
 </body>
 </html>
